@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "module": "ESNext",
+    "declarationDir": "./declarations",
+    "moduleResolution": "node",
+    "rootDir": "./src",
+    "strict": true,
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "strictNullChecks": true,
+    "esModuleInterop": true,
+    "lib": ["DOM"],
+    "declaration": true
+  },
+  "include": ["./package"],
+  "exclude": [
+    "node_modules",
+    "test",
+    "dist",
+    "demo",
+    "tsup.config.ts",
+    "vitest.config.ts"
+  ]
+}
