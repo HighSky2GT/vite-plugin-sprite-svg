@@ -1,4 +1,4 @@
-declare module 'virtual:svg-icons-register' {
+declare module 'vite-plugin-sprite-svg' {
   // eslint-disable-next-line
   const component: any
   export default component

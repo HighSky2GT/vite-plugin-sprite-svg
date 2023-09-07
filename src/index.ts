@@ -1,4 +1,4 @@
-import type { Plugin } from 'vite'
+import type { Plugin , ResolvedConfig} from 'vite'
 import type { Config } from 'svgo'
 
 import { normalizePath } from 'vite'
@@ -9,47 +9,47 @@ import fs from 'fs-extra'
 import path from 'pathe'
 import SVGCompiler from 'svg-baker'
 import { optimize } from 'svgo'
-import type { DomInject, FileStats, ViteSvgPluginConfig } from './typing'
+import { DomLocation, type FileCache, type ViteSvgPluginConfig } from './typing'
 
-const SVG_ICONS_REGISTER_NAME = 'virtual:sprite-svg'
+const SVG_PLUGIN_NAME = 'vite-plugin-sprite-svg'
 const SVG_ICONS_CLIENT = 'virtual:sprite-svg-names'
 const SVG_DOM_ID = '__sprite__svg__dom__'
 const XMLNS = 'http://www.w3.org/2000/svg'
 const XMLNS_LINK = 'http://www.w3.org/1999/xlink'
-export function createSvgIconsPlugin(opt: ViteSvgPluginConfig): Plugin {
-  const cache = new Map<string, FileStats>()
+export function createSpriteSvgPlugin(opt: ViteSvgPluginConfig): Plugin {
+  const cache = new Map<string, FileCache>()
 
   let isBuild = false
   const options = {
     svgoOptions: true,
     symbolId: 'icon-[dir]-[name]',
-    inject: 'body-last' as const,
+    inject: DomLocation.BODY_END as const,
     customDomId: SVG_DOM_ID,
     ...opt,
   }
 
-  let { svgoOptions } = options
-  const { symbolId } = options
+  let { svgoConfig: svgoOptions } = options
+  const { svgSymbolId } = options
 
-  if (!symbolId.includes('[name]'))
+  if (!svgSymbolId?.includes('[name]'))
     throw new Error('SymbolId must contain [name] string!')
 
   svgoOptions = svgoOptions || typeof svgoOptions === 'boolean' ? {} : svgoOptions
 
   return {
-    name: 'vite:svg-icons',
-    configResolved(resolvedConfig) {
+    name: 'vite-plugin-sprite-svg',
+    configResolved(resolvedConfig:ResolvedConfig) {
       isBuild = resolvedConfig.command === 'build'
     },
     resolveId(id) {
-      return [SVG_ICONS_REGISTER_NAME, SVG_ICONS_CLIENT].includes(id) ? id : null
+      return [SVG_PLUGIN_NAME, SVG_ICONS_CLIENT].includes(id) ? id : null
     },
 
     async load(id, ssr) {
       if (!isBuild && !ssr)
         return null
 
-      const isRegister = id.endsWith(SVG_ICONS_REGISTER_NAME)
+      const isRegister = id.endsWith(SVG_PLUGIN_NAME)
       const isClient = id.endsWith(SVG_ICONS_CLIENT)
 
       if (ssr && !isBuild && (isRegister || isClient))
@@ -70,7 +70,7 @@ export function createSvgIconsPlugin(opt: ViteSvgPluginConfig): Plugin {
       middlewares.use(async (req, res, next) => {
         const url = normalizePath(req.url!)
 
-        const registerId = `/@id/${SVG_ICONS_REGISTER_NAME}`
+        const registerId = `/@id/${SVG_PLUGIN_NAME}`
         const clientId = `/@id/${SVG_ICONS_CLIENT}`
         if ([clientId, registerId].some(item => url.endsWith(item))) {
           res.setHeader('Content-Type', 'application/javascript')
@@ -95,7 +95,7 @@ export function createSvgIconsPlugin(opt: ViteSvgPluginConfig): Plugin {
 }
 
 export async function createModuleCode(
-  cache: Map<string, FileStats>,
+  cache: Map<string, FileCache>,
   svgoOptions: Config,
   options: ViteSvgPluginConfig,
 ) {
@@ -111,18 +111,18 @@ export async function createModuleCode(
        if (typeof window !== 'undefined') {
          function loadSvg() {
            var body = document.body;
-           var svgDom = document.getElementById('${options.customDomId}');
+           var svgDom = document.getElementById('${options.svgId}');
            if(!svgDom) {
              svgDom = document.createElementNS('${XMLNS}', 'svg');
              svgDom.style.position = 'absolute';
              svgDom.style.width = '0';
              svgDom.style.height = '0';
-             svgDom.id = '${options.customDomId}';
+             svgDom.id = '${options.svgId}';
              svgDom.setAttribute('xmlns','${XMLNS}');
              svgDom.setAttribute('xmlns:link','${XMLNS_LINK}');
            }
            svgDom.innerHTML = ${JSON.stringify(html)};
-           ${domInject(options.inject)}
+           ${domInject(options.domLocation)}
          }
          if(document.readyState === 'loading') {
            document.addEventListener('DOMContentLoaded', loadSvg);
@@ -137,9 +137,9 @@ export async function createModuleCode(
   }
 }
 
-function domInject(inject: DomInject = 'body-last') {
+function domInject(inject: DomLocation = DomLocation.BODY_END) {
   switch (inject) {
-    case 'body-first':
+    case DomLocation.BODY_END:
       return 'body.insertBefore(svgDom, body.firstChild);'
     default:
       return 'body.insertBefore(svgDom, body.lastChild);'
@@ -152,11 +152,11 @@ function domInject(inject: DomInject = 'body-last') {
  * @param options
  */
 export async function compilerIcons(
-  cache: Map<string, FileStats>,
+  cache: Map<string, FileCache>,
   svgOptions: Config,
   options: ViteSvgPluginConfig,
 ) {
-  const { iconDirs } = options
+  const { dirs: iconDirs } = options
 
   let insertHtml = ''
   const idSet = new Set<string>()
@@ -232,7 +232,7 @@ export async function compilerIcon(
 }
 
 export function createSymbolId(name: string, options: ViteSvgPluginConfig) {
-  const { symbolId } = options
+  const { svgSymbolId: symbolId } = options
 
   if (!symbolId)
     return name
@@ -252,6 +252,7 @@ export function createSymbolId(name: string, options: ViteSvgPluginConfig) {
 }
 
 export function discreteDir(name: string) {
+  //判断路径是否包含/，不包含直接返回
   if (!normalizePath(name).includes('/')) {
     return {
       fileName: name,
