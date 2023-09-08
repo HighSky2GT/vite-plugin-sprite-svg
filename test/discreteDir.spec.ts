@@ -1,5 +1,5 @@
-import { discreteDir } from '../core/src/index'
-import { test, describe, expect } from 'vitest'
+import { describe, expect, test } from 'vitest'
+import { discreteDir } from '../src/index'
 
 describe('discreteDir test', () => {
   test('discreteDir Not included /', () => {

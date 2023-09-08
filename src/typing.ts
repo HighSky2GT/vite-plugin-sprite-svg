@@ -2,7 +2,7 @@ import type { Config } from 'svgo'
 
 export enum DomLocation {
   BODY_START,
-  BODY_END
+  BODY_END,
 }
 
 export interface ViteSvgPluginConfig {
@@ -15,7 +15,7 @@ export interface ViteSvgPluginConfig {
    * svgo 配置,用于压缩svg used to compress svg
    * @default：true
    */
-  svgoConfig?: boolean | Config
+  svgoConfig?: Config
 
   /**
    * icon format
@@ -32,9 +32,9 @@ export interface ViteSvgPluginConfig {
 
   /**
    * 自定义插入的svg元素id
-   * @default: __svg__icons__dom__
+   * @default: __sprite__svg__dom__
    */
-  svgId?: string
+  svgDomId?: string
 }
 
 export interface FileCache {

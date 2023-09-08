@@ -1,3 +1,4 @@
 .history
 .npmignore
 node_modules
+dist
