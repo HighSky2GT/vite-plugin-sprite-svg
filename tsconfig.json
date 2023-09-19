@@ -1,10 +1,11 @@
 {
   "compilerOptions": {
+    "jsx": "preserve",
     "target": "ES2017",
     "module": "ESNext",
     "declarationDir": "./declarations",
     "moduleResolution": "node",
-    "rootDir": "./src",
+    "rootDir": "package",
     "strict": true,
     "noImplicitAny": true,
     "noImplicitThis": true,
@@ -13,7 +14,7 @@
     "lib": ["DOM"],
     "declaration": true
   },
-  "include": ["./src"],
+  "include": ["package/"],
   "exclude": [
     "node_modules",
     "test",

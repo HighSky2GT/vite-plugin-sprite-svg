@@ -6,17 +6,18 @@ import fg from 'fast-glob'
 import getEtag from 'etag'
 import cors from 'cors'
 import fs from 'fs-extra'
-import path from 'pathe'
 import SVGCompiler from 'svg-baker'
 import { optimize } from 'svgo'
-import { DomLocation, type FileCache, type ViteSvgPluginConfig } from './typing'
+import { SvgSprite } from '../vue/index'
+import { DomLocation, type FileCache, type ViteSvgPluginConfig } from './types'
+import { extname } from './utils'
 
 const SVG_PLUGIN_NAME = 'virtual:sprite-svg'
-const SVG_ICONS_CLIENT = 'virtual:svg-names'
+const SVG_ICONS = '~svgIcons'
 const SVG_DOM_ID = '__sprite__svg__dom__'
 const XMLNS = 'http://www.w3.org/2000/svg'
 const XMLNS_LINK = 'http://www.w3.org/1999/xlink'
-export function createSpriteSvgPlugin(opt: ViteSvgPluginConfig): Plugin {
+function createSpriteSvgPlugin(opt: ViteSvgPluginConfig): Plugin {
   const cache = new Map<string, FileCache>()
 
   let isBuild = false
@@ -44,7 +45,7 @@ export function createSpriteSvgPlugin(opt: ViteSvgPluginConfig): Plugin {
         const url = normalizePath(req.url!)
 
         const registerId = `/@id/${SVG_PLUGIN_NAME}`
-        const clientId = `/@id/${SVG_ICONS_CLIENT}`
+        const clientId = `/@id/${SVG_ICONS}`
         if ([clientId, registerId].some(item => url.endsWith(item))) {
           res.setHeader('Content-Type', 'application/javascript')
           res.setHeader('Cache-Control', 'no-cache')
@@ -65,7 +66,7 @@ export function createSpriteSvgPlugin(opt: ViteSvgPluginConfig): Plugin {
     },
 
     resolveId(id) {
-      return [SVG_PLUGIN_NAME, SVG_ICONS_CLIENT].includes(id) ? id : null
+      return [SVG_PLUGIN_NAME, SVG_ICONS].includes(id) ? id : null
     },
 
     async load(id, ssr) {
@@ -73,7 +74,7 @@ export function createSpriteSvgPlugin(opt: ViteSvgPluginConfig): Plugin {
         return null
 
       const isRegister = id.endsWith(SVG_PLUGIN_NAME)
-      const isClient = id.endsWith(SVG_ICONS_CLIENT)
+      const isClient = id.endsWith(SVG_ICONS)
 
       if (ssr && !isBuild && (isRegister || isClient))
         return 'export default {}'
@@ -90,7 +91,7 @@ export function createSpriteSvgPlugin(opt: ViteSvgPluginConfig): Plugin {
   }
 }
 
-export async function createModuleCode(
+async function createModuleCode(
   cache: Map<string, FileCache>,
   options: ViteSvgPluginConfig,
 ) {
@@ -101,28 +102,28 @@ export async function createModuleCode(
   const html = insertHtml
     .replace(new RegExp(xmlns, 'g'), '')
     .replace(new RegExp(xmlnsLink, 'g'), '')
-
+  const jsonHtml = JSON.stringify(html)
   const code = `
        if (typeof window !== 'undefined') {
-         function loadSvg() {
+         function loadSvgSprite() {
            var body = document.body;
-           var svgDom = document.getElementById('${options.svgDomId}');
-           if(!svgDom) {
-             svgDom = document.createElementNS('${XMLNS}', 'svg');
-             svgDom.style.position = 'absolute';
-             svgDom.style.width = '0';
-             svgDom.style.height = '0';
-             svgDom.id = '${options.svgDomId}';
-             svgDom.setAttribute('xmlns','${XMLNS}');
-             svgDom.setAttribute('xmlns:link','${XMLNS_LINK}');
+           var dom = document.getElementById('${options.svgDomId}');
+           if(!dom) {
+             dom = document.createElementNS('${XMLNS}', 'svg');
+             dom.id = '${options.svgDomId}';
+             dom.setAttribute('xmlns','${XMLNS}');
+             dom.setAttribute('xmlns:link','${XMLNS_LINK}');
+             dom.style.position = 'absolute';
+             dom.style.width = '0';
+             dom.style.height = '0';
            }
-           svgDom.innerHTML = ${JSON.stringify(html)};
+           dom.innerHTML = ${jsonHtml};
            ${domInject(options.domLocation)}
          }
          if(document.readyState === 'loading') {
-           document.addEventListener('DOMContentLoaded', loadSvg);
+           document.addEventListener('DOMContentLoaded', loadSvgSprite);
          } else {
-           loadSvg()
+          loadSvgSprite()
          }
       }
         `
@@ -135,9 +136,9 @@ export async function createModuleCode(
 function domInject(inject: DomLocation = DomLocation.BODY_END) {
   switch (inject) {
     case DomLocation.BODY_END:
-      return 'body.insertBefore(svgDom, body.firstChild);'
+      return 'body.insertBefore(dom, body.lastChild);'
     default:
-      return 'body.insertBefore(svgDom, body.lastChild);'
+      return 'body.insertBefore(dom, body.firstChild);'
   }
 }
 
@@ -146,7 +147,7 @@ function domInject(inject: DomLocation = DomLocation.BODY_END) {
  * @param cache
  * @param options
  */
-export async function compilerAllSvg(
+async function compilerAllSvg(
   cache: Map<string, FileCache>,
   options: ViteSvgPluginConfig,
 ) {
@@ -205,7 +206,7 @@ export async function compilerAllSvg(
   return { insertHtml, idSet }
 }
 
-export async function compilerSvg(
+async function compilerSvg(
   file: string,
   symbolId: string,
   svgoConfig?: Config,
@@ -226,7 +227,7 @@ export async function compilerSvg(
   return svgSymbol.render()
 }
 
-export function createSymbolId(name: string, options: ViteSvgPluginConfig) {
+function createSymbolId(name: string, options: ViteSvgPluginConfig) {
   const { svgSymbolId: symbolId } = options
 
   if (!symbolId)
@@ -243,10 +244,10 @@ export function createSymbolId(name: string, options: ViteSvgPluginConfig) {
     fName = fileName
   }
   id = id.replace(/\[name\]/g, fName)
-  return id.replace(path.extname(id), '')
+  return id.replace(extname(id), '')
 }
 
-export function discreteDir(name: string) {
+function discreteDir(name: string) {
   // 判断路径是否包含/，不包含直接返回
   if (!normalizePath(name).includes('/')) {
     return {
@@ -259,3 +260,6 @@ export function discreteDir(name: string) {
   const dirName = strList.join('-')
   return { fileName, dirName }
 }
+
+export default createSpriteSvgPlugin
+export { SvgSprite }
