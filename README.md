@@ -45,8 +45,7 @@ export default defineConfig(() => {
      * custom dom id
      * @default: __svg__icons__dom__
      */
-    customDomId: '__svg__icons__dom__',
-    svgoConfig: true
+    customDomId: '__svg__icons__dom__'
   }
 
   return {
@@ -61,29 +60,7 @@ export default defineConfig(() => {
 ```ts
 import 'virtual:sprite-svg'
 ```
-到这里 svg 精灵图已经生成
-- 查看所有svg图片名
+## 查看所有svg图片名
 ```ts
 import svgIcons from '~svgIcons'
 ```
-
-
-
-## 框架中使用
-### VUE方式
-```Vue
-<script setup lang='ts'>
-// 导入组件
-import { SvgSprite } from 'vite-plugin-sprite-svg'
-const name = 'xxx'
-</script>
-<template>
-  <!-- 使用组件 -->
-  <SvgSprite :svg-name="name"/>
-</template>
-<style>
-</style>
-```
-
-### React方式
-待完善
