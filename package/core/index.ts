@@ -1,5 +1,4 @@
 import type { Plugin, ResolvedConfig } from 'vite'
-import type { Config } from 'svgo'
 
 import { normalizePath } from 'vite'
 import fg from 'fast-glob'
@@ -8,7 +7,6 @@ import cors from 'cors'
 import fs from 'fs-extra'
 import SVGCompiler from 'svg-baker'
 import { optimize } from 'svgo'
-import { SvgSprite } from '../vue/index'
 import { DomLocation, type FileCache, type ViteSvgPluginConfig } from './types'
 import { extname } from './utils'
 
@@ -17,12 +15,11 @@ const SVG_ICONS = '~svgIcons'
 const SVG_DOM_ID = '__sprite__svg__dom__'
 const XMLNS = 'http://www.w3.org/2000/svg'
 const XMLNS_LINK = 'http://www.w3.org/1999/xlink'
-function createSpriteSvgPlugin(opt: ViteSvgPluginConfig): Plugin {
+export function createSpriteSvgPlugin(opt: ViteSvgPluginConfig): Plugin {
   const cache = new Map<string, FileCache>()
 
   let isBuild = false
   const options = {
-    svgoConfig: {},
     svgSymbolId: 'icon-[dir]-[name]',
     domLocation: DomLocation.BODY_END,
     svgDomId: SVG_DOM_ID,
@@ -142,11 +139,6 @@ function domInject(inject: DomLocation = DomLocation.BODY_END) {
   }
 }
 
-/**
- * 把所有svg预加载
- * @param cache
- * @param options
- */
 async function compilerAllSvg(
   cache: Map<string, FileCache>,
   options: ViteSvgPluginConfig,
@@ -156,9 +148,7 @@ async function compilerAllSvg(
   let insertHtml = ''
   const idSet = new Set<string>()
 
-  // 遍历文件夹下的所有svg，并保存到缓存中
   for (const dir of dirs) {
-    // 同步读取文件
     const svgFilsStats = fg.sync('**/*.svg', {
       cwd: dir,
       stats: true,
@@ -167,7 +157,6 @@ async function compilerAllSvg(
 
     for (const entry of svgFilsStats) {
       const { path, stats: { mtimeMs } = {} } = entry
-      // 缓存中是否存在
       const cacheStat = cache.get(path)
       let svgSymbol
       let symbolId
@@ -176,7 +165,7 @@ async function compilerAllSvg(
       const getSymbol = async () => {
         relativeName = normalizePath(path).replace(normalizePath(`${dir}/`), '')
         symbolId = createSymbolId(relativeName, options)
-        svgSymbol = await compilerSvg(path, symbolId, options.svgoConfig)
+        svgSymbol = await compilerSvg(path, symbolId)
         idSet.add(symbolId)
       }
 
@@ -209,14 +198,13 @@ async function compilerAllSvg(
 async function compilerSvg(
   file: string,
   symbolId: string,
-  svgoConfig?: Config,
 ): Promise<string | null> {
   if (!file)
     return null
 
   let content = fs.readFileSync(file, 'utf-8')
 
-  const { data } = optimize(content, svgoConfig)
+  const { data } = optimize(content)
   content = data || content
 
   const svgSymbol = await new SVGCompiler().addSymbol({
@@ -248,7 +236,6 @@ function createSymbolId(name: string, options: ViteSvgPluginConfig) {
 }
 
 function discreteDir(name: string) {
-  // 判断路径是否包含/，不包含直接返回
   if (!normalizePath(name).includes('/')) {
     return {
       fileName: name,
@@ -260,6 +247,3 @@ function discreteDir(name: string) {
   const dirName = strList.join('-')
   return { fileName, dirName }
 }
-
-export default createSpriteSvgPlugin
-export { SvgSprite }

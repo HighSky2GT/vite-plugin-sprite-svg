@@ -1,5 +1,3 @@
-import type { Config } from 'svgo'
-
 export enum DomLocation {
   BODY_START,
   BODY_END,
@@ -10,13 +8,6 @@ export interface ViteSvgPluginConfig {
    * 资源路径
    */
   dirs: string[]
-
-  /**
-   * svgo 配置,用于压缩svg used to compress svg
-   * @default：true
-   */
-  svgoConfig?: Config
-
   /**
    * icon format
    * svg id格式
