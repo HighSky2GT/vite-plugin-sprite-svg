@@ -1,4 +1,3 @@
-import SvgSprite from "./vue/index"
 
 declare module 'virtual:sprite-svg' {
   // eslint-disable-next-line
@@ -12,10 +11,7 @@ declare module '~svgIcons' {
   export default iconsNames
 }
 
-
-declare module 'vue' {
-  export interface GlobalComponents {
-    SvgSprite: typeof SvgSprite
-  }
+declare module 'svg-baker'{
+  const SVGCompiler:any
+  export default SVGCompiler
 }
-

@@ -5,7 +5,7 @@
     "module": "ESNext",
     "declarationDir": "./declarations",
     "moduleResolution": "node",
-    "rootDir": "package",
+    "rootDir": "src",
     "strict": true,
     "noImplicitAny": true,
     "noImplicitThis": true,
@@ -14,13 +14,13 @@
     "lib": ["DOM"],
     "declaration": true
   },
-  "include": ["package/"],
+  "include": ["src/"],
   "exclude": [
     "node_modules",
     "test",
     "dist",
     "demo",
-    "package/core/tsup.config.ts",
+    "tsup.config.ts",
     "vitest.config.ts"
   ]
 }

@@ -7,7 +7,7 @@ import cors from 'cors'
 import fs from 'fs-extra'
 import SVGCompiler from 'svg-baker'
 import { optimize } from 'svgo'
-import { DomLocation, type FileCache, type ViteSvgPluginConfig } from './types'
+import { type Config, DomLocation, type FileCache } from './types'
 import { extname } from './utils'
 
 const SVG_PLUGIN_NAME = 'virtual:sprite-svg'
@@ -15,7 +15,7 @@ const SVG_ICONS = '~svgIcons'
 const SVG_DOM_ID = '__sprite__svg__dom__'
 const XMLNS = 'http://www.w3.org/2000/svg'
 const XMLNS_LINK = 'http://www.w3.org/1999/xlink'
-export function createSpriteSvgPlugin(opt: ViteSvgPluginConfig): Plugin {
+function createSpriteSvgPlugin(opt: Config): Plugin {
   const cache = new Map<string, FileCache>()
 
   let isBuild = false
@@ -90,7 +90,7 @@ export function createSpriteSvgPlugin(opt: ViteSvgPluginConfig): Plugin {
 
 async function createModuleCode(
   cache: Map<string, FileCache>,
-  options: ViteSvgPluginConfig,
+  options: Config,
 ) {
   const { insertHtml, idSet } = await compilerAllSvg(cache, options)
 
@@ -141,7 +141,7 @@ function domInject(inject: DomLocation = DomLocation.BODY_END) {
 
 async function compilerAllSvg(
   cache: Map<string, FileCache>,
-  options: ViteSvgPluginConfig,
+  options: Config,
 ) {
   const { dirs } = options
 
@@ -215,7 +215,7 @@ async function compilerSvg(
   return svgSymbol.render()
 }
 
-function createSymbolId(name: string, options: ViteSvgPluginConfig) {
+function createSymbolId(name: string, options: Config) {
   const { svgSymbolId: symbolId } = options
 
   if (!symbolId)
@@ -247,3 +247,5 @@ function discreteDir(name: string) {
   const dirName = strList.join('-')
   return { fileName, dirName }
 }
+
+export default createSpriteSvgPlugin
